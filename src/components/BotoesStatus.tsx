@@ -1,26 +1,30 @@
 import type { FiltroStatus } from "../types/rickandmorty";
-interface Props {
-  statusAtual: FiltroStatus;
-  onChange: (status: FiltroStatus) => void;
+
+interface BotoesStatusProps {
+  filtroStatus: FiltroStatus;
+  onFiltroChange: (filtro: FiltroStatus) => void;
 }
 
-const status = [
-  { label: "Todos", value: "all" },
-  { label: "Alive", value: "alive" },
-  { label: "Dead", value: "dead" },
-  { label: "Unknown", value: "unknown" },
-] as const;
+const filtros: { label: string; valor: FiltroStatus }[] = [
+  { label: "Todos", valor: "all" },
+  { label: "Alive", valor: "alive" },
+  { label: "Dead", valor: "dead" },
+  { label: "Unknown", valor: "unknown" },
+];
 
-export default function BotoesStatus({ statusAtual, onChange }: Props) {
+export default function BotoesStatus({
+  filtroStatus,
+  onFiltroChange,
+}: BotoesStatusProps) {
   return (
     <div className="botoes-status">
-      {status.map((item) => (
+      {filtros.map((filtro) => (
         <button
-          key={item.value}
-          className={statusAtual === item.value ? "ativo" : ""}
-          onClick={() => onChange(item.value)}
+          key={filtro.valor}
+          className={filtroStatus === filtro.valor ? "ativo" : ""}
+          onClick={() => onFiltroChange(filtro.valor)}
         >
-          {item.label}
+          {filtro.label}
         </button>
       ))}
     </div>

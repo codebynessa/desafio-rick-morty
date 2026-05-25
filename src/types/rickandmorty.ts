@@ -1,9 +1,4 @@
-export interface ApiInfo {
-  count: number;
-  pages: number;
-  next: string | null;
-  prev: string | null;
-}
+export type FiltroStatus = "all" | "alive" | "dead" | "unknown";
 
 export interface Personagem {
   id: number;
@@ -11,21 +6,16 @@ export interface Personagem {
   status: "Alive" | "Dead" | "unknown";
   species: string;
   image: string;
-  location: {
-    name: string;
-    url: string;
-  };
-  origin: {
-    name: string;
-    url: string;
-  };
-  episode: string[];
-  created: string;
+}
+
+export interface InfoAPI {
+  count: number;
+  pages: number;
+  next: string | null;
+  prev: string | null;
 }
 
 export interface RespostaAPI {
-  info: ApiInfo;
+  info: InfoAPI;
   results: Personagem[];
 }
-
-export type FiltroStatus = "all" | "alive" | "dead" | "unknown";

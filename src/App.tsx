@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-import CartaoPersonagem from "./components/CartaoPersonagem";
 import BarraBusca from "./components/BarraBusca";
 import BotoesStatus from "./components/BotoesStatus";
+import CartaoPersonagem from "./components/CartaoPersonagem";
 import Paginacao from "./components/Paginacao";
+
+import { useDebounce } from "./hooks/useDebounce";
+import { useFetch } from "./hooks/useFetch";
+import { useFavoritos } from "./contexts/FavoritosContext";
 
 import type {
   FiltroStatus,
@@ -13,168 +17,97 @@ import type {
 } from "./types/rickandmorty";
 
 export default function App() {
-  const [personagens, setPersonagens] = useState<Personagem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [erro, setErro] = useState("");
   const [pagina, setPagina] = useState(1);
-  const [totalPaginas, setTotalPaginas] = useState(1);
   const [busca, setBusca] = useState("");
-  const [buscaDebounce, setBuscaDebounce] = useState("");
-  const [status, setStatus] = useState<FiltroStatus>("all");
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("all");
 
-  const [personagemSelecionado, setPersonagemSelecionado] =
-    useState<Personagem | null>(null);
-  const [modalAberto, setModalAberto] = useState(false);
+  const buscaDebounce = useDebounce(busca, 400);
+  const { favoritos } = useFavoritos();
 
-  async function buscarPersonagens(): Promise<void> {
-    try {
-      setLoading(true);
-      setErro("");
+  const url = useMemo(() => {
+    const parametros = new URLSearchParams();
 
-      let url = `https://rickandmortyapi.com/api/character?page=${pagina}`;
+    parametros.append("page", String(pagina));
 
-      if (status !== "all") {
-        url += `&status=${status}`;
-      }
-
-      const resposta = await fetch(url);
-
-      if (!resposta.ok) {
-        throw new Error("Erro ao buscar personagens");
-      }
-
-      const dados: RespostaAPI = await resposta.json();
-
-      setPersonagens(dados.results);
-      setTotalPaginas(dados.info.pages);
-    } catch {
-      setErro("Não foi possível carregar os personagens.");
-      setPersonagens([]);
-    } finally {
-      setLoading(false);
+    if (filtroStatus !== "all") {
+      parametros.append("status", filtroStatus);
     }
-  }
 
-  async function abrirDetalhes(id: number): Promise<void> {
-    try {
-      const resposta = await fetch(
-        `https://rickandmortyapi.com/api/character/${id}`
-      );
+    return `https://rickandmortyapi.com/api/character?${parametros.toString()}`;
+  }, [pagina, filtroStatus]);
 
-      if (!resposta.ok) {
-        throw new Error("Erro ao buscar detalhes");
-      }
+  const { dados, loading, erro } = useFetch<RespostaAPI>(url);
 
-      const dados: Personagem = await resposta.json();
-
-      setPersonagemSelecionado(dados);
-      setModalAberto(true);
-    } catch {
-      setErro("Não foi possível carregar os detalhes do personagem.");
-    }
-  }
-
-  function fecharModal() {
-    setModalAberto(false);
-    setPersonagemSelecionado(null);
-  }
-
-  function mudarStatus(novoStatus: FiltroStatus) {
-    setStatus(novoStatus);
+  useEffect(() => {
     setPagina(1);
-  }
+  }, [filtroStatus]);
 
-  useEffect(() => {
-    buscarPersonagens();
-  }, [pagina, status]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setBuscaDebounce(busca);
-    }, 400);
-
-    return () => clearTimeout(timeout);
-  }, [busca]);
-
-  const personagensFiltrados = personagens.filter((personagem) =>
-    personagem.name
-      .toLowerCase()
-      .includes(buscaDebounce.toLowerCase())
-  );
+  const personagensFiltrados: Personagem[] =
+    dados?.results.filter((personagem) =>
+      personagem.name.toLowerCase().includes(buscaDebounce.toLowerCase())
+    ) ?? [];
 
   return (
-    <main className="container">
-      <h1>🧬 Painel de Personagens</h1>
-      <p className="subtitulo">Dados consumidos da Rick and Morty API</p>
-
-      <div className="controles">
-        <BarraBusca valor={busca} onChange={setBusca} />
-        <BotoesStatus statusAtual={status} onChange={mudarStatus} />
-      </div>
-
-      {loading && <p className="mensagem">Carregando...</p>}
-
-      {erro && <p className="erro">{erro}</p>}
-
-      {!loading && !erro && (
-        <section className="grid">
-          {personagensFiltrados.map((personagem) => (
-            <CartaoPersonagem
-              key={personagem.id}
-              personagem={personagem}
-              onClick={abrirDetalhes}
-            />
-          ))}
-        </section>
-      )}
-
-      {!loading && !erro && (
-        <Paginacao
-          paginaAtual={pagina}
-          totalPaginas={totalPaginas}
-          onAnterior={() => setPagina(pagina - 1)}
-          onProxima={() => setPagina(pagina + 1)}
-        />
-      )}
-
-      {modalAberto && personagemSelecionado && (
-        <div className="modal-fundo" onClick={fecharModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <button className="fechar" onClick={fecharModal}>
-              ×
-            </button>
-
-            <img
-              src={personagemSelecionado.image}
-              alt={personagemSelecionado.name}
-            />
-
-            <h2>{personagemSelecionado.name}</h2>
-
-            <p>
-              <strong>Status:</strong> {personagemSelecionado.status}
-            </p>
-
-            <p>
-              <strong>Espécie:</strong> {personagemSelecionado.species}
-            </p>
-
-            <p>
-              <strong>Origem:</strong> {personagemSelecionado.origin.name}
-            </p>
-
-            <p>
-              <strong>Localização:</strong>{" "}
-              {personagemSelecionado.location.name}
-            </p>
-
-            <p>
-              <strong>Episódios:</strong>{" "}
-              {personagemSelecionado.episode.length}
-            </p>
+    <main className="app">
+      <section className="painel">
+        <header className="cabecalho">
+          <div>
+            <h1>🧬 Painel de Personagens</h1>
+            <p>Rick and Morty API · useFetch + useDebounce + Context</p>
           </div>
-        </div>
-      )}
+
+          <div className="contador-favoritos">
+            ❤️ {favoritos.length} favoritos
+          </div>
+        </header>
+
+        <section className="controles">
+          <BarraBusca busca={busca} onBuscaChange={setBusca} />
+
+          <BotoesStatus
+            filtroStatus={filtroStatus}
+            onFiltroChange={setFiltroStatus}
+          />
+        </section>
+
+        {loading && <p className="mensagem">Carregando personagens...</p>}
+
+        {erro && <p className="mensagem erro">{erro}</p>}
+
+        {!loading && !erro && personagensFiltrados.length === 0 && (
+          <p className="mensagem">Nenhum personagem encontrado.</p>
+        )}
+
+        {!loading && !erro && personagensFiltrados.length > 0 && (
+          <section className="grade-personagens">
+            {personagensFiltrados.map((personagem) => (
+              <CartaoPersonagem
+                key={personagem.id}
+                personagem={personagem}
+              />
+            ))}
+          </section>
+        )}
+
+        {dados && (
+          <>
+            <div className="linha"></div>
+
+            <footer className="rodape">
+              <span>
+                {dados.info.count} personagens · Página {pagina} de{" "}
+                {dados.info.pages}
+              </span>
+
+              <Paginacao
+                pagina={pagina}
+                totalPaginas={dados.info.pages}
+                onPaginaChange={setPagina}
+              />
+            </footer>
+          </>
+        )}
+      </section>
     </main>
   );
 }

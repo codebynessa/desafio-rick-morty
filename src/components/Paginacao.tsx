@@ -1,31 +1,33 @@
-interface Props {
-  paginaAtual: number;
+interface PaginacaoProps {
+  pagina: number;
   totalPaginas: number;
-  onAnterior: () => void;
-  onProxima: () => void;
+  onPaginaChange: (pagina: number) => void;
 }
 
 export default function Paginacao({
-  paginaAtual,
+  pagina,
   totalPaginas,
-  onAnterior,
-  onProxima,
-}: Props) {
+  onPaginaChange,
+}: PaginacaoProps) {
   return (
     <div className="paginacao">
+      <button
+        disabled={pagina === 1}
+        onClick={() => onPaginaChange(pagina - 1)}
+      >
+        ← Anterior
+      </button>
+
       <span>
-        Página {paginaAtual} de {totalPaginas}
+        Página {pagina} de {totalPaginas}
       </span>
 
-      <div>
-        <button onClick={onAnterior} disabled={paginaAtual === 1}>
-          ← Anterior
-        </button>
-
-        <button onClick={onProxima} disabled={paginaAtual === totalPaginas}>
-          Próxima →
-        </button>
-      </div>
+      <button
+        disabled={pagina === totalPaginas}
+        onClick={() => onPaginaChange(pagina + 1)}
+      >
+        Próxima →
+      </button>
     </div>
   );
 }
